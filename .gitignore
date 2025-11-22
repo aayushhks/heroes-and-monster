@@ -1,6 +1,8 @@
 # IntelliJ project settings
 .idea/
 *.iml
+/bin/
+*.DS_Store
 
 # Compiled class files
 *.class

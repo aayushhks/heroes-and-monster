@@ -1,1 +1,9 @@
-*/.idea
+# IntelliJ project settings
+.idea/
+*.iml
+
+# Compiled class files
+*.class
+
+# Output folder
+/out/

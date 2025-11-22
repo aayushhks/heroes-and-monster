@@ -52,10 +52,6 @@ public class Hero extends RPGCharacter {
         this.hp = this.level * 100;
     }
 
-    // ==========================================
-    //              CORE RPG LOGIC
-    // ==========================================
-
     public void gainExperience(int amount) {
         this.experience += amount;
         // Spec Rule: Experience points to level up = hero_current_level * 10
@@ -108,10 +104,6 @@ public class Hero extends RPGCharacter {
         // We will just assume current state was max for this simple implementation, or just give 0.
     }
 
-    // ==========================================
-    //           EQUIPMENT & INVENTORY
-    // ==========================================
-
     public void equipWeapon(Weapon weapon) {
         this.equippedWeapon = weapon;
         System.out.println(this.name + " equipped " + weapon.getName());
@@ -133,10 +125,6 @@ public class Hero extends RPGCharacter {
     public Inventory getInventory() {
         return inventory;
     }
-
-    // ==========================================
-    //           GETTERS & SETTERS
-    // ==========================================
 
     public HeroType getType() { return type; }
 

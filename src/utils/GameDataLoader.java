@@ -231,10 +231,6 @@ public class GameDataLoader {
         return spells;
     }
 
-    // ==========================================
-    //              PRIVATE HELPERS
-    // ==========================================
-
     private static boolean shouldSkip(String line) {
         // Skip empty lines or header lines that start with "Name/"
         return line.trim().isEmpty() || line.trim().startsWith("Name/");

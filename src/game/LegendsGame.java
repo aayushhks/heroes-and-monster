@@ -18,12 +18,18 @@ import java.util.Scanner;
 /**
  * The concrete implementation of the RPG "Legends: Monsters and Heroes".
  * Orchestrates the game loop, user input, hero selection, and world interaction.
+ * Integrates Board, Market, and Battle systems.
  */
 public class LegendsGame extends Game {
 
     private LegendsBoard board;
     private Party party;
     private final Random random = new Random();
+    private boolean quitGame = false;
+
+    // Controllers
+    private MarketController marketController;
+    private BattleController battleController;
 
     // Data Caches
     private List<Hero> availableWarriors;
@@ -35,6 +41,10 @@ public class LegendsGame extends Game {
     protected void initializeGame(Scanner scanner) {
         System.out.println("Loading Game Data...");
         loadAssets();
+
+        // Initialize Sub-Controllers
+        this.marketController = new MarketController();
+        this.battleController = new BattleController(allMonsters);
 
         System.out.println("\n--- Hero Selection ---");
         int partySize = InputValidator.getValidInt(scanner, "Enter party size (1-3): ", 1, 3);
@@ -51,6 +61,8 @@ public class LegendsGame extends Game {
         this.board.setParty(party);
 
         System.out.println("\nThe party enters the world...");
+        // NOTE: We do NOT print the board here anymore.
+        // The first call to processTurn() will handle the initial render.
     }
 
     private void loadAssets() {
@@ -58,7 +70,7 @@ public class LegendsGame extends Game {
         availableSorcerers = GameDataLoader.loadHeroes("Sorcerers.txt", HeroType.SORCERER);
         availablePaladins = GameDataLoader.loadHeroes("Paladins.txt", HeroType.PALADIN);
 
-        // We load monsters now to have them ready for random encounters
+        // Load all monsters into a central catalog for the BattleController to use
         allMonsters = new ArrayList<>();
         allMonsters.addAll(GameDataLoader.loadMonsters("Dragons.txt", MonsterType.DRAGON));
         allMonsters.addAll(GameDataLoader.loadMonsters("Exoskeletons.txt", MonsterType.EXOSKELETON));
@@ -87,31 +99,34 @@ public class LegendsGame extends Game {
         }
 
         int heroIndex = InputValidator.getValidInt(scanner, "Select hero ID: ", 1, choiceList.size()) - 1;
-        // Remove from list so same hero can't be picked twice
         return choiceList.remove(heroIndex);
     }
 
     @Override
     protected void processTurn(Scanner scanner) {
+        // 1. RENDER: Always show the board state at the VERY START of the turn
         board.printBoard();
-        System.out.println(party); // Show stats
+
+        // 2. UI: Stats and Controls
+        System.out.println(party);
         System.out.println("Controls: [W]Up [A]Left [S]Down [D]Right [M]Market [I]Info [Q]Quit");
 
+        // 3. INPUT: Get user action
         String input = InputValidator.getValidOption(scanner, "Action: ", "w", "a", "s", "d", "m", "i", "q");
 
+        // 4. UPDATE: Process logic
         switch (input) {
-            case "w": moveParty(-1, 0); break;
-            case "a": moveParty(0, -1); break;
-            case "s": moveParty(1, 0); break;
-            case "d": moveParty(0, 1); break;
+            case "w": moveParty(scanner, -1, 0); break;
+            case "a": moveParty(scanner, 0, -1); break;
+            case "s": moveParty(scanner, 1, 0); break;
+            case "d": moveParty(scanner, 0, 1); break;
             case "m": handleMarketInteraction(scanner); break;
             case "i": showDetailedInfo(); break;
-            case "q": // Handled by shouldQuit()
-                break;
+            case "q": quitGame = true; break;
         }
     }
 
-    private void moveParty(int dRow, int dCol) {
+    private void moveParty(Scanner scanner, int dRow, int dCol) {
         int newRow = party.getRow() + dRow;
         int newCol = party.getCol() + dCol;
 
@@ -131,17 +146,17 @@ public class LegendsGame extends Game {
 
         // Handle Cell Events
         if (targetCell.isCommon()) {
-            checkForBattle();
+            checkForBattle(scanner);
         }
     }
 
-    private void checkForBattle() {
-        // Simple random roll for battle (e.g., 30% chance on common tiles)
-        if (random.nextDouble() < 0.30) {
+    private void checkForBattle(Scanner scanner) {
+        // Spec: "Every time the heroes visit a space, we 'roll a dice'"
+        if (random.nextDouble() < 0.50) {
             System.out.println("\n*** AMBUSH! You have encountered monsters! ***");
-            // In a real implementation, we would call a BattleController here.
-            // For now, we just simulate the event.
-            System.out.println("(Battle Logic would trigger here - To Be Implemented in next step)");
+            battleController.startBattle(scanner, party);
+
+            // After battle ends, the loop repeats, and the board is printed at the top of processTurn
         }
     }
 
@@ -151,8 +166,8 @@ public class LegendsGame extends Game {
             System.out.println("There is no market here.");
             return;
         }
-        System.out.println("\nWelcome to the Market!");
-        System.out.println("(Market Logic would trigger here - To Be Implemented in next step)");
+        // Delegate to Market Controller
+        marketController.enterMarket(scanner, party);
     }
 
     private void showDetailedInfo() {
@@ -171,19 +186,15 @@ public class LegendsGame extends Game {
 
     @Override
     protected boolean shouldQuit() {
-        // In this simple loop, we rely on the main input check.
-        // If the user typed 'q' in processTurn, we need a flag or logic here.
-        // For simplicity in this structure, we can check a flag,
-        // but 'Game.java' structure might need a generic flag check.
-        // A cleaner way in industry code is a State pattern, but here:
-        return false;
-        // Note: The 'q' in processTurn just ends the turn.
-        // Real quitting logic should toggle a boolean 'running' flag in the parent or return a status.
-        // Given the constraints, assume 'q' sets a flag we check.
+        return quitGame;
     }
 
     @Override
     protected void endGame() {
-        System.out.println("Game Over. Thanks for playing Legends!");
+        System.out.println("\nGame Over. Thanks for playing Legends: Monsters and Heroes!");
+        if (party != null) {
+            System.out.println("Final Status:");
+            System.out.println(party);
+        }
     }
 }

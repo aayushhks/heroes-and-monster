@@ -14,6 +14,10 @@ public class LegendsBoard extends Board {
     // Reference to the party to render their position
     private Party party;
 
+    // Colors for the Party (Green Text)
+    private static final String ANSI_GREEN = "\u001B[32m";
+    private static final String ANSI_RESET = "\u001B[0m";
+
     public LegendsBoard(int width, int height) {
         super(width, height);
         this.grid = new Cell[height][width];
@@ -70,12 +74,12 @@ public class LegendsBoard extends Board {
 
             for (int c = 0; c < width; c++) {
                 // Render Logic:
-                // 1. If Party is here, draw Party Symbol.
-                // 2. Else, draw Cell Symbol.
+                // 1. If Party is here, draw Party Symbol in GREEN.
+                // 2. Else, draw Cell Symbol (which handles its own color).
 
                 if (party != null && party.getRow() == r && party.getCol() == c) {
-                    // " P " or " H " for Party/Hero
-                    System.out.print(" P "); // P for Party
+                    // " P " for Party, wrapped in Green
+                    System.out.print(ANSI_GREEN + " P " + ANSI_RESET);
                 } else {
                     System.out.print(grid[r][c].toString());
                 }

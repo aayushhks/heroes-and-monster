@@ -10,17 +10,20 @@ import java.util.Random;
 public class LegendsBoard extends Board {
     private final Cell[][] grid;
     private final Random random;
-
-    // Reference to the party to render their position
     private Party party;
 
-    // Colors for the Party (Green Text)
-    private static final String ANSI_GREEN = "\u001B[32m";
+    // Visual styling
+    private static final String HERO_SYMBOL = " P ";
+    private static final String ANSI_HERO_COLOR = "\u001B[36m"; // Cyan (to contrast with Purple grid)
+    private static final String ANSI_BORDER_COLOR = "\u001B[35m"; // Purple
     private static final String ANSI_RESET = "\u001B[0m";
 
-    public LegendsBoard(int width, int height) {
-        super(width, height);
-        this.grid = new Cell[height][width];
+    public LegendsBoard(int n) {
+        super(n, n);
+        if (n < 4 || n > 20) {
+            throw new IllegalArgumentException("Board size must be between 4 and 20.");
+        }
+        this.grid = new Cell[n][n];
         this.random = new Random();
         initializeBoard();
     }
@@ -29,31 +32,29 @@ public class LegendsBoard extends Board {
         this.party = party;
     }
 
-    /**
-     * Procedurally generates the map based on assignment specs:
-     * - 20% Inaccessible
-     * - 30% Market
-     * - 50% Common
-     */
     private void initializeBoard() {
         for (int r = 0; r < height; r++) {
             for (int c = 0; c < width; c++) {
-                // Force start position (0,0) to be Common so the party isn't stuck/blocked immediately
-                if (r == 0 && c == 0) {
-                    grid[r][c] = new Cell(CellType.COMMON);
-                    continue;
-                }
-
-                double roll = random.nextDouble();
-                if (roll < 0.20) {
-                    grid[r][c] = new Cell(CellType.INACCESSIBLE);
-                } else if (roll < 0.50) { // 0.20 + 0.30 = 0.50
-                    grid[r][c] = new Cell(CellType.MARKET);
-                } else {
-                    grid[r][c] = new Cell(CellType.COMMON);
-                }
+                grid[r][c] = createCell(r, c);
             }
         }
+    }
+
+    private Cell createCell(int r, int c) {
+        // 1. START POSITION (0,0) -> Always Common
+        if (r == 0 && c == 0) return new Cell(CellType.COMMON);
+
+        // 2. SAFE ZONE: Ensure (0,1) AND (1,0) are never blocked
+        // This allows movement Right (0,1) and Down (1,0) from start
+        if ((r == 0 && c == 1) || (r == 1 && c == 0)) {
+            return new Cell(CellType.COMMON);
+        }
+
+        // 3. RANDOM GENERATION
+        double roll = random.nextDouble();
+        if (roll < 0.20) return new Cell(CellType.INACCESSIBLE);
+        else if (roll < 0.50) return new Cell(CellType.MARKET);
+        else return new Cell(CellType.COMMON);
     }
 
     public Cell getCell(int row, int col) {
@@ -70,21 +71,17 @@ public class LegendsBoard extends Board {
 
         for (int r = 0; r < height; r++) {
             // Left Border for the row
-            System.out.print("|");
+            System.out.print(ANSI_BORDER_COLOR + "|" + ANSI_RESET);
 
             for (int c = 0; c < width; c++) {
-                // Render Logic:
-                // 1. If Party is here, draw Party Symbol in GREEN.
-                // 2. Else, draw Cell Symbol (which handles its own color).
-
+                // Render Logic
                 if (party != null && party.getRow() == r && party.getCol() == c) {
-                    // " P " for Party, wrapped in Green
-                    System.out.print(ANSI_GREEN + " P " + ANSI_RESET);
+                    System.out.print(ANSI_HERO_COLOR + HERO_SYMBOL + ANSI_RESET);
                 } else {
                     System.out.print(grid[r][c].toString());
                 }
 
-                System.out.print("|"); // Column separator
+                System.out.print(ANSI_BORDER_COLOR + "|" + ANSI_RESET); // Column separator
             }
             System.out.println(); // New line after row
 
@@ -94,9 +91,10 @@ public class LegendsBoard extends Board {
     }
 
     private void printHorizontalBorder() {
+        System.out.print(ANSI_BORDER_COLOR + "+");
         for (int c = 0; c < width; c++) {
-            System.out.print("+---");
+            System.out.print("---+");
         }
-        System.out.println("+");
+        System.out.println(ANSI_RESET);
     }
 }

@@ -22,6 +22,16 @@ public class BattleController {
     private final List<Monster> monsterCatalog;
     private final RandomGenerator rng;
 
+    // ANSI Colors
+    private static final String ANSI_RESET = "\u001B[0m";
+    private static final String ANSI_CYAN = "\u001B[36m";
+    private static final String ANSI_YELLOW = "\u001B[33m";
+    private static final String ANSI_GREEN = "\u001B[32m";
+    private static final String ANSI_RED = "\u001B[31m";
+    private static final String ANSI_BLUE = "\u001B[34m";
+    private static final String ANSI_PURPLE = "\u001B[35m";
+    private static final String ANSI_WHITE_BOLD = "\033[1;37m";
+
     public BattleController(List<Monster> monsterCatalog) {
         this.monsterCatalog = monsterCatalog;
         this.rng = RandomGenerator.getInstance();
@@ -31,39 +41,36 @@ public class BattleController {
      * Initiates and manages a battle sequence.
      */
     public void startBattle(Scanner scanner, Party party) {
-        // 1. Setup Phase
         List<Monster> enemies = spawnMonsters(party);
-        System.out.println("Battle Started! Enemies approaching:");
+        System.out.println(ANSI_RED + "\n*** Battle Started! Enemies approaching: ***" + ANSI_RESET);
         for (Monster m : enemies) System.out.println("- " + m);
 
         int round = 1;
         boolean battleActive = true;
 
-        // 2. Battle Loop
         while (battleActive) {
-            System.out.println("\n=== Round " + round + " ===");
+            System.out.println("\n" + ANSI_YELLOW + "=== Round " + round + " ===" + ANSI_RESET);
 
-            // Heroes Turn
-            processHeroesTurn(scanner, party, enemies);
+            // Returns true if battle should continue, false if player quit
+            if (!processHeroesTurn(scanner, party, enemies)) {
+                battleActive = false;
+                break;
+            }
 
-            // Check Victory (All monsters dead)
             if (enemies.stream().allMatch(Monster::isFainted)) {
                 processVictory(party, enemies);
                 battleActive = false;
                 break;
             }
 
-            // Monsters Turn
             processMonstersTurn(party, enemies);
 
-            // Check Defeat (All heroes fainted)
             if (party.isPartyWipedOut()) {
-                System.out.println("The party has been defeated!");
+                System.out.println(ANSI_RED + "The party has been defeated!" + ANSI_RESET);
                 battleActive = false;
                 break;
             }
 
-            // End of Round Regeneration
             performRegeneration(party);
             round++;
         }
@@ -73,36 +80,35 @@ public class BattleController {
         List<Monster> enemies = new ArrayList<>();
         int partySize = party.getSize();
 
-        // Determine difficulty (based on highest level hero)
         int targetLevel = party.getHeroes().stream()
                 .mapToInt(Hero::getLevel)
                 .max().orElse(1);
 
         for (int i = 0; i < partySize; i++) {
-            // Pick a random template
             Monster template = monsterCatalog.get(rng.nextInt(monsterCatalog.size()));
 
-            // Create a new instance scaled to target level
-            // Note: In a real app, we'd use a Copy Constructor. Here we create manually.
             Monster monster = new Monster(
                     template.getName(),
                     template.getType(),
-                    targetLevel, // Force level match
-                    template.getBaseDamage() * (targetLevel / (double)Math.max(1, template.getLevel())), // Scale Dmg
-                    template.getDefense() * (targetLevel / (double)Math.max(1, template.getLevel())),    // Scale Def
-                    template.getDodgeChance() * 100 // Convert back to 0-100 for constructor
+                    targetLevel,
+                    template.getBaseDamage() * (targetLevel / (double)Math.max(1, template.getLevel())),
+                    template.getDefense() * (targetLevel / (double)Math.max(1, template.getLevel())),
+                    template.getDodgeChance() * 100
             );
             enemies.add(monster);
         }
         return enemies;
     }
 
-    private void processHeroesTurn(Scanner scanner, Party party, List<Monster> enemies) {
+    /**
+     * @return false if player chose to Quit, true otherwise.
+     */
+    private boolean processHeroesTurn(Scanner scanner, Party party, List<Monster> enemies) {
         for (Hero hero : party.getHeroes()) {
             if (hero.isFainted()) continue;
             if (enemies.stream().allMatch(Monster::isFainted)) break;
 
-            System.out.println("\nIt is " + hero.getName() + "'s turn.");
+            System.out.println("\nIt is " + ANSI_PURPLE + hero.getName() + ANSI_RESET + "'s turn.");
             System.out.println(hero);
 
             boolean actionTaken = false;
@@ -112,40 +118,43 @@ public class BattleController {
                 System.out.println("3. Use Potion");
                 System.out.println("4. Equip Gear");
                 System.out.println("5. Info");
+                System.out.println("6. Quit Game"); // Added Quit Option
 
-                int choice = InputValidator.getValidInt(scanner, "Action: ", 1, 5);
+                int choice = InputValidator.getValidInt(scanner, ANSI_CYAN + "Action: " + ANSI_RESET, 1, 6);
                 switch (choice) {
                     case 1: actionTaken = performAttack(scanner, hero, enemies); break;
                     case 2: actionTaken = performSpell(scanner, hero, enemies); break;
                     case 3: actionTaken = performPotion(scanner, hero); break;
-                    case 4: performEquip(scanner, hero); break; // Doesn't consume turn
-                    case 5: showBattleInfo(party, enemies); break; // Doesn't consume turn
+                    case 4: performEquip(scanner, hero); break;
+                    case 5: showBattleInfo(party, enemies); break;
+                    case 6:
+                        System.out.println(ANSI_RED + "Quitting Game..." + ANSI_RESET);
+                        System.exit(0); // Terminate immediately
+                        return false;
                 }
             }
         }
+        return true;
     }
 
     private boolean performAttack(Scanner scanner, Hero hero, List<Monster> enemies) {
         Monster target = selectMonster(scanner, enemies);
-        if (target == null) return false; // Cancelled
+        if (target == null) return false;
 
-        // Dodge Check
         if (rng.nextDouble() < target.getDodgeChance()) {
             System.out.println(target.getName() + " dodged the attack!");
             return true;
         }
 
-        // Calculate Damage
         double weaponDmg = (hero.getEquippedWeapon() != null) ? hero.getEquippedWeapon().getDamage() : 0;
         double rawDamage = (hero.getStrength() + weaponDmg) * 0.05;
 
-        // Apply Mitigation
-        double actualDamage = Math.max(0, rawDamage - (target.getDefense() * 0.05)); // Simple mitigation formula
+        double actualDamage = Math.max(0, rawDamage - (target.getDefense() * 0.05));
 
         target.setHp(target.getHp() - actualDamage);
-        System.out.printf("%s attacks %s for %.0f damage!\n", hero.getName(), target.getName(), actualDamage);
+        System.out.printf("%s attacks %s for " + ANSI_RED + "%.0f damage!" + ANSI_RESET + "\n", hero.getName(), target.getName(), actualDamage);
 
-        if (target.isFainted()) System.out.println(target.getName() + " has been defeated!");
+        if (target.isFainted()) System.out.println(ANSI_GREEN + target.getName() + " has been defeated!" + ANSI_RESET);
 
         return true;
     }
@@ -153,36 +162,33 @@ public class BattleController {
     private boolean performSpell(Scanner scanner, Hero hero, List<Monster> enemies) {
         List<Spell> spells = hero.getInventory().getSpells();
         if (spells.isEmpty()) {
-            System.out.println("You have no spells!");
+            System.out.println(ANSI_YELLOW + "You have no spells!" + ANSI_RESET);
             return false;
         }
 
-        System.out.println("--- Spellbook ---");
+        System.out.println(ANSI_WHITE_BOLD + "--- Spellbook ---" + ANSI_RESET);
         for (int i = 0; i < spells.size(); i++) {
             System.out.println((i + 1) + ". " + spells.get(i));
         }
         System.out.println((spells.size() + 1) + ". Cancel");
 
-        int choice = InputValidator.getValidInt(scanner, "Select Spell: ", 1, spells.size() + 1);
+        int choice = InputValidator.getValidInt(scanner, ANSI_CYAN + "Select Spell: " + ANSI_RESET, 1, spells.size() + 1);
         if (choice == spells.size() + 1) return false;
 
         Spell spell = spells.get(choice - 1);
         if (hero.getMana() < spell.getManaCost()) {
-            System.out.println("Not enough Mana!");
+            System.out.println(ANSI_RED + "Not enough Mana!" + ANSI_RESET);
             return false;
         }
 
         Monster target = selectMonster(scanner, enemies);
         if (target == null) return false;
 
-        // Execute Spell
         hero.setMana(hero.getMana() - spell.getManaCost());
 
-        // Damage Calculation
         double damage = spell.getDamage() + ((hero.getDexterity() / 10000.0) * spell.getDamage());
         target.setHp(target.getHp() - damage);
 
-        // Apply Status Effect
         if (!target.isFainted()) {
             if (spell.getType() == SpellType.ICE) {
                 target.reduceDamage(target.getBaseDamage() * 0.1);
@@ -196,25 +202,24 @@ public class BattleController {
             }
         }
 
-        System.out.printf("%s casts %s on %s for %.0f damage!\n", hero.getName(), spell.getName(), target.getName(), damage);
-        hero.getInventory().removeItem(spell); // Consumed
+        System.out.printf("%s casts %s on %s for " + ANSI_RED + "%.0f damage!" + ANSI_RESET + "\n", hero.getName(), spell.getName(), target.getName(), damage);
+        hero.getInventory().removeItem(spell);
         return true;
     }
 
     private boolean performPotion(Scanner scanner, Hero hero) {
         List<Potion> potions = hero.getInventory().getPotions();
         if (potions.isEmpty()) {
-            System.out.println("No potions in inventory.");
+            System.out.println(ANSI_YELLOW + "No potions in inventory." + ANSI_RESET);
             return false;
         }
 
-        System.out.println("--- Potions ---");
+        System.out.println(ANSI_WHITE_BOLD + "--- Potions ---" + ANSI_RESET);
         for(int i=0; i<potions.size(); i++) System.out.println((i+1) + ". " + potions.get(i));
 
-        int choice = InputValidator.getValidInt(scanner, "Use Potion: ", 1, potions.size());
+        int choice = InputValidator.getValidInt(scanner, ANSI_CYAN + "Use Potion: " + ANSI_RESET, 1, potions.size());
         Potion potion = potions.get(choice - 1);
 
-        // Apply Effect
         double val = potion.getAttributeIncrease();
         if (potion.affects("Health")) hero.setHp(hero.getHp() + val);
         if (potion.affects("Mana")) hero.setMana(hero.getMana() + val);
@@ -222,7 +227,7 @@ public class BattleController {
         if (potion.affects("Dexterity")) hero.setDexterity(hero.getDexterity() + val);
         if (potion.affects("Agility")) hero.setAgility(hero.getAgility() + val);
 
-        System.out.println(hero.getName() + " used " + potion.getName() + "!");
+        System.out.println(ANSI_GREEN + hero.getName() + " used " + potion.getName() + "!" + ANSI_RESET);
         hero.getInventory().removeItem(potion);
         return true;
     }
@@ -230,17 +235,17 @@ public class BattleController {
     private void performEquip(Scanner scanner, Hero hero) {
         System.out.println("1. Weapons");
         System.out.println("2. Armor");
-        int type = InputValidator.getValidInt(scanner, "Type: ", 1, 2);
+        int type = InputValidator.getValidInt(scanner, ANSI_CYAN + "Type: " + ANSI_RESET, 1, 2);
 
         if (type == 1) {
             List<Weapon> weps = hero.getInventory().getWeapons();
-            if (weps.isEmpty()) { System.out.println("No weapons."); return; }
+            if (weps.isEmpty()) { System.out.println(ANSI_YELLOW + "No weapons." + ANSI_RESET); return; }
             for(int i=0; i<weps.size(); i++) System.out.println((i+1) + ". " + weps.get(i));
             int sel = InputValidator.getValidInt(scanner, "Equip: ", 1, weps.size());
             hero.equipWeapon(weps.get(sel-1));
         } else {
             List<Armor> arms = hero.getInventory().getArmor();
-            if (arms.isEmpty()) { System.out.println("No armor."); return; }
+            if (arms.isEmpty()) { System.out.println(ANSI_YELLOW + "No armor." + ANSI_RESET); return; }
             for(int i=0; i<arms.size(); i++) System.out.println((i+1) + ". " + arms.get(i));
             int sel = InputValidator.getValidInt(scanner, "Equip: ", 1, arms.size());
             hero.equipArmor(arms.get(sel-1));
@@ -251,7 +256,6 @@ public class BattleController {
         for (Monster monster : enemies) {
             if (monster.isFainted()) continue;
 
-            // Pick random alive hero
             List<Hero> aliveHeroes = party.getHeroes().stream()
                     .filter(h -> !h.isFainted())
                     .collect(Collectors.toList());
@@ -260,24 +264,20 @@ public class BattleController {
 
             Hero target = aliveHeroes.get(rng.nextInt(aliveHeroes.size()));
 
-            // Hero Dodge Check
             if (rng.nextDouble() < target.getAgility() * 0.002) {
                 System.out.println(target.getName() + " dodged " + monster.getName() + "'s attack!");
                 continue;
             }
 
-            // Calc Damage
             double rawDmg = monster.getBaseDamage();
             double mitigation = (target.getEquippedArmor() != null) ? target.getEquippedArmor().getDamageReduction() : 0;
-            // Armor mitigates damage (assuming simple subtraction or percentage based on spec interpretation)
-            // Spec says "damage reduction value". Let's assume generic RPG subtraction but clamped.
-            double finalDmg = Math.max(0, rawDmg - (mitigation * 0.2)); // Factor 0.2 to balance big numbers
+            double finalDmg = Math.max(0, rawDmg - (mitigation * 0.2));
 
             target.setHp(target.getHp() - finalDmg);
-            System.out.printf("%s attacks %s for %.0f damage!\n", monster.getName(), target.getName(), finalDmg);
+            System.out.printf("%s attacks %s for " + ANSI_RED + "%.0f damage!" + ANSI_RESET + "\n", monster.getName(), target.getName(), finalDmg);
 
             if (target.isFainted()) {
-                System.out.println(target.getName() + " has fainted!");
+                System.out.println(ANSI_RED + target.getName() + " has fainted!" + ANSI_RESET);
             }
         }
     }
@@ -289,11 +289,11 @@ public class BattleController {
                 h.setMana(h.getMana() * 1.1);
             }
         }
-        System.out.println("Heroes regain some health and mana.");
+        System.out.println(ANSI_CYAN + "Heroes regain some health and mana." + ANSI_RESET);
     }
 
     private void processVictory(Party party, List<Monster> enemies) {
-        System.out.println("\n*** VICTORY! ***");
+        System.out.println(ANSI_GREEN + "\n*** VICTORY! ***" + ANSI_RESET);
         double goldReward = enemies.stream().mapToDouble(Monster::getLevel).sum() * 100;
         int xpReward = enemies.size() * 2;
 
@@ -314,19 +314,19 @@ public class BattleController {
         List<Monster> alive = enemies.stream().filter(m -> !m.isFainted()).collect(Collectors.toList());
         if (alive.isEmpty()) return null;
 
-        System.out.println("Select Target:");
+        System.out.println(ANSI_CYAN + "Select Target:" + ANSI_RESET);
         for(int i=0; i<alive.size(); i++) {
             System.out.println((i+1) + ". " + alive.get(i));
         }
-        int choice = InputValidator.getValidInt(scanner, "Target: ", 1, alive.size());
+        int choice = InputValidator.getValidInt(scanner, ANSI_CYAN + "Target: " + ANSI_RESET, 1, alive.size());
         return alive.get(choice - 1);
     }
 
     private void showBattleInfo(Party party, List<Monster> enemies) {
-        System.out.println("\n--- Battle Status ---");
-        System.out.println("HEROES:");
+        System.out.println("\n" + ANSI_WHITE_BOLD + "--- Battle Status ---" + ANSI_RESET);
+        System.out.println(ANSI_PURPLE + "HEROES:" + ANSI_RESET);
         party.getHeroes().forEach(System.out::println);
-        System.out.println("MONSTERS:");
+        System.out.println(ANSI_RED + "MONSTERS:" + ANSI_RESET);
         enemies.forEach(System.out::println);
         System.out.println("---------------------");
     }

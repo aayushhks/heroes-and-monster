@@ -6,12 +6,9 @@ package board;
  */
 public enum CellType {
     // ANSI Color Codes
-    // Format: \u001B[xxm where xx is the color ID
-    // 0m=Reset, 31m=Red, 32m=Green, 33m=Yellow, 34m=Blue
-
-    COMMON("   ", "\u001B[0m"),       // Default (White/Reset)
-    MARKET(" M ", "\u001B[33m"),      // Yellow text for Commerce
-    INACCESSIBLE(" X ", "\u001B[31m"); // Red text for Danger/Blocked
+    COMMON(" . ", "\u001B[90m"),      // Dark Grey Dot
+    MARKET(" M ", "\u001B[33;1m"),    // Bright Yellow/Gold
+    INACCESSIBLE(" X ", "\u001B[31m");  // Red Hash blocks
 
     private final String symbol;
     private final String colorCode;
@@ -23,7 +20,6 @@ public enum CellType {
     }
 
     public String getSymbol() {
-        // Return: Color + Symbol + Reset
         return colorCode + symbol + RESET;
     }
 }

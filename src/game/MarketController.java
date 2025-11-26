@@ -9,6 +9,7 @@ import items.Spell.SpellType;
 import utils.GameDataLoader;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.stream.Collectors;
@@ -20,6 +21,14 @@ import java.util.stream.Collectors;
 public class MarketController {
 
     private final List<Item> globalItemCatalog;
+
+    // ANSI Colors
+    private static final String ANSI_RESET = "\u001B[0m";
+    private static final String ANSI_CYAN = "\u001B[36m";
+    private static final String ANSI_YELLOW = "\u001B[33m";
+    private static final String ANSI_GREEN = "\u001B[32m";
+    private static final String ANSI_RED = "\u001B[31m";
+    private static final String ANSI_WHITE_BOLD = "\033[1;37m";
 
     public MarketController() {
         this.globalItemCatalog = new ArrayList<>();
@@ -48,14 +57,12 @@ public class MarketController {
      * Generates a random subset of items for this specific market visit.
      */
     public void enterMarket(Scanner scanner, Party party) {
-        System.out.println("You enter a bustling marketplace...");
-
         // Generate a unique inventory for this market session (e.g., 5-10 random items)
         List<Item> marketInventory = generateMarketInventory();
 
         boolean inMarket = true;
         while (inMarket) {
-            System.out.println("\n--- Market Menu ---");
+            System.out.println("\n" + ANSI_YELLOW + "--- Market Menu ---" + ANSI_RESET);
             System.out.println("1. Buy Items");
             System.out.println("2. Sell Items");
             System.out.println("3. Exit Market");
@@ -68,32 +75,37 @@ public class MarketController {
                 case 3: inMarket = false; break;
             }
         }
-        System.out.println("You leave the market.");
+        System.out.println(ANSI_GREEN + "You leave the market." + ANSI_RESET);
     }
 
     private List<Item> generateMarketInventory() {
         List<Item> inventory = new ArrayList<>();
-        RandomGenerator rng = RandomGenerator.getInstance();
-
-        // Randomly select items from the global catalog
-        // Let's say a market has ~10 items
-        int stockSize = 10;
         if (globalItemCatalog.isEmpty()) return inventory;
 
+        // Create a shuffled copy of the catalog to pick unique random items
+        List<Item> shuffledCatalog = new ArrayList<>(globalItemCatalog);
+        Collections.shuffle(shuffledCatalog);
+
+        // Select the first N items (e.g., 10)
+        int stockSize = Math.min(10, shuffledCatalog.size());
         for (int i = 0; i < stockSize; i++) {
-            int index = rng.nextInt(globalItemCatalog.size());
-            inventory.add(globalItemCatalog.get(index));
+            inventory.add(shuffledCatalog.get(i));
         }
+
         return inventory;
     }
+
+    // ==========================================
+    //               BUYING LOGIC
+    // ==========================================
 
     private void buyLoop(Scanner scanner, Party party, List<Item> marketInventory) {
         Hero shopper = selectHero(scanner, party, "Who is buying?");
         if (shopper == null) return;
 
         while (true) {
-            System.out.println("\n--- Items for Sale (Shopper: " + shopper.getName() + " | Gold: " + shopper.getMoney() + ") ---");
-            printItemList(marketInventory);
+            System.out.println("\n" + ANSI_WHITE_BOLD + "--- Items for Sale (Shopper: " + shopper.getName() + " | Gold: " + shopper.getMoney() + ") ---" + ANSI_RESET);
+            printItemTable(marketInventory);
             System.out.println((marketInventory.size() + 1) + ". Back");
 
             int choice = InputValidator.getValidInt(scanner, "Select item to buy: ", 1, marketInventory.size() + 1);
@@ -107,20 +119,20 @@ public class MarketController {
     private void processPurchase(Hero hero, Item item) {
         // Rule: Hero cannot buy item if level is too low
         if (hero.getLevel() < item.getMinLevel()) {
-            System.out.println("Cannot buy! Required Level: " + item.getMinLevel());
+            System.out.println(ANSI_RED + "Cannot buy! Required Level: " + item.getMinLevel() + ANSI_RESET);
             return;
         }
 
         // Rule: Hero cannot buy if insufficient gold
         if (hero.getMoney() < item.getPrice()) {
-            System.out.println("Insufficient Gold! Cost: " + item.getPrice());
+            System.out.println(ANSI_RED + "Insufficient Gold! Cost: " + item.getPrice() + ANSI_RESET);
             return;
         }
 
         // Transaction
         hero.deductMoney(item.getPrice());
         hero.getInventory().addItem(item);
-        System.out.println("Purchase successful! " + item.getName() + " added to inventory.");
+        System.out.println(ANSI_GREEN + "Purchase successful! " + item.getName() + " added to inventory." + ANSI_RESET);
     }
 
     // ==========================================
@@ -134,17 +146,13 @@ public class MarketController {
         while (true) {
             List<Item> sellableItems = seller.getInventory().getItems();
             if (sellableItems.isEmpty()) {
-                System.out.println(seller.getName() + " has nothing to sell.");
+                System.out.println(ANSI_YELLOW + seller.getName() + " has nothing to sell." + ANSI_RESET);
                 break;
             }
 
-            System.out.println("\n--- Your Inventory (Seller: " + seller.getName() + ") ---");
+            System.out.println("\n" + ANSI_WHITE_BOLD + "--- Your Inventory (Seller: " + seller.getName() + ") ---" + ANSI_RESET);
             // Show items with their resale value (50% of price)
-            for (int i = 0; i < sellableItems.size(); i++) {
-                Item item = sellableItems.get(i);
-                double resaleValue = item.getPrice() * 0.5;
-                System.out.printf("%d. %s (Sell for: %.0f)\n", (i + 1), item.getName(), resaleValue);
-            }
+            printSellableItemTable(sellableItems);
             System.out.println((sellableItems.size() + 1) + ". Back");
 
             int choice = InputValidator.getValidInt(scanner, "Select item to sell: ", 1, sellableItems.size() + 1);
@@ -161,10 +169,7 @@ public class MarketController {
         hero.getInventory().removeItem(item);
         hero.addMoney(resaleValue);
 
-        System.out.println("Sold " + item.getName() + " for " + resaleValue + " gold.");
-
-        // Optional: If you want sold items to appear in the market, add to marketInventory here.
-        // For this implementation, the market just absorbs it.
+        System.out.println(ANSI_GREEN + "Sold " + item.getName() + " for " + resaleValue + " gold." + ANSI_RESET);
     }
 
     // ==========================================
@@ -172,7 +177,7 @@ public class MarketController {
     // ==========================================
 
     private Hero selectHero(Scanner scanner, Party party, String prompt) {
-        System.out.println(prompt);
+        System.out.println(ANSI_CYAN + prompt + ANSI_RESET);
         for (int i = 0; i < party.getSize(); i++) {
             System.out.println((i + 1) + ". " + party.getHero(i).getName());
         }
@@ -184,9 +189,52 @@ public class MarketController {
         return party.getHero(choice - 1);
     }
 
-    private void printItemList(List<Item> items) {
+    // --- PRETTY TABLE PRINTING ---
+
+    private void printItemTable(List<Item> items) {
+        System.out.println(ANSI_CYAN + "+----+----------------------+-----+----------+--------------------------------+" + ANSI_RESET);
+        System.out.printf(ANSI_CYAN + "|" + ANSI_RESET + " %-2s " + ANSI_CYAN + "|" + ANSI_RESET + " %-20s " + ANSI_CYAN + "|" + ANSI_RESET + " %-3s " + ANSI_CYAN + "|" + ANSI_RESET + " %-8s " + ANSI_CYAN + "|" + ANSI_RESET + " %-30s " + ANSI_CYAN + "|\n" + ANSI_RESET, "ID", "NAME", "LVL", "COST", "TYPE / STATS");
+        System.out.println(ANSI_CYAN + "+----+----------------------+-----+----------+--------------------------------+" + ANSI_RESET);
+
         for (int i = 0; i < items.size(); i++) {
-            System.out.println((i + 1) + ". " + items.get(i).toString());
+            Item item = items.get(i);
+            String stats = extractStats(item); // Helper to get simplified stats
+            System.out.printf(ANSI_CYAN + "|" + ANSI_RESET + " %-2d " + ANSI_CYAN + "|" + ANSI_RESET + " %-20s " + ANSI_CYAN + "|" + ANSI_RESET + " %-3d " + ANSI_CYAN + "|" + ANSI_RESET + " " + ANSI_YELLOW + "%-8.0f" + ANSI_RESET + " " + ANSI_CYAN + "|" + ANSI_RESET + " %-30s " + ANSI_CYAN + "|\n" + ANSI_RESET,
+                    (i + 1), item.getName(), item.getMinLevel(), item.getPrice(), stats);
         }
+        System.out.println(ANSI_CYAN + "+----+----------------------+-----+----------+--------------------------------+" + ANSI_RESET);
+    }
+
+    private void printSellableItemTable(List<Item> items) {
+        System.out.println(ANSI_CYAN + "+----+----------------------+-----+----------+--------------------------------+" + ANSI_RESET);
+        System.out.printf(ANSI_CYAN + "|" + ANSI_RESET + " %-2s " + ANSI_CYAN + "|" + ANSI_RESET + " %-20s " + ANSI_CYAN + "|" + ANSI_RESET + " %-3s " + ANSI_CYAN + "|" + ANSI_RESET + " %-8s " + ANSI_CYAN + "|" + ANSI_RESET + " %-30s " + ANSI_CYAN + "|\n" + ANSI_RESET, "ID", "NAME", "LVL", "SELL", "TYPE / STATS");
+        System.out.println(ANSI_CYAN + "+----+----------------------+-----+----------+--------------------------------+" + ANSI_RESET);
+
+        for (int i = 0; i < items.size(); i++) {
+            Item item = items.get(i);
+            String stats = extractStats(item);
+            double sellPrice = item.getPrice() * 0.5;
+            System.out.printf(ANSI_CYAN + "|" + ANSI_RESET + " %-2d " + ANSI_CYAN + "|" + ANSI_RESET + " %-20s " + ANSI_CYAN + "|" + ANSI_RESET + " %-3d " + ANSI_CYAN + "|" + ANSI_RESET + " " + ANSI_YELLOW + "%-8.0f" + ANSI_RESET + " " + ANSI_CYAN + "|" + ANSI_RESET + " %-30s " + ANSI_CYAN + "|\n" + ANSI_RESET,
+                    (i + 1), item.getName(), item.getMinLevel(), sellPrice, stats);
+        }
+        System.out.println(ANSI_CYAN + "+----+----------------------+-----+----------+--------------------------------+" + ANSI_RESET);
+    }
+
+    // Helper to format item details concisely for the table
+    private String extractStats(Item item) {
+        if (item instanceof Weapon) {
+            Weapon w = (Weapon) item;
+            return String.format("Weapon (Dmg: %.0f)", w.getDamage());
+        } else if (item instanceof Armor) {
+            Armor a = (Armor) item;
+            return String.format("Armor (Def: %.0f)", a.getDamageReduction());
+        } else if (item instanceof Spell) {
+            Spell s = (Spell) item;
+            return String.format("Spell (%s, Dmg: %.0f)", s.getType(), s.getDamage());
+        } else if (item instanceof Potion) {
+            Potion p = (Potion) item;
+            return String.format("Potion (+%.0f)", p.getAttributeIncrease());
+        }
+        return "Item";
     }
 }

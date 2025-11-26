@@ -23,10 +23,7 @@ public class GameDataLoader {
 
     private static final String DATA_DIR = "data";
 
-    // ==========================================
-    //              ENTITY LOADERS
-    // ==========================================
-
+    // ENTITY LOADERS
     public static List<Hero> loadHeroes(String fileName, HeroType type) {
         List<Hero> heroes = new ArrayList<>();
         File file = new File(DATA_DIR + File.separator + fileName);
@@ -99,10 +96,7 @@ public class GameDataLoader {
         return monsters;
     }
 
-    // ==========================================
-    //              ITEM LOADERS
-    // ==========================================
-
+    // ITEM LOADERS
     public static List<Weapon> loadWeapons(String fileName) {
         List<Weapon> weapons = new ArrayList<>();
         File file = new File(DATA_DIR + File.separator + fileName);

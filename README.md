@@ -141,6 +141,7 @@ src/utils/*.java src/items/*.java src/entities/*.java src/board/*.java
 
 # Run after compiling
 java -cp bin Main
+```
 
 # Design Pattern
 

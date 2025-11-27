@@ -19,10 +19,10 @@ public abstract class Game {
     public final void play(Scanner scanner) {
         System.out.println("Initializing Game Engine...");
 
-        // Step 1: Configuration & Setup
+        // Configuration & Setup
         initializeGame(scanner);
 
-        // Step 2: Main Game Loop
+        // Main Game Loop
         boolean isRunning = true;
         while (isRunning) {
             // Check for game over conditions before the turn
@@ -40,7 +40,7 @@ public abstract class Game {
             }
         }
 
-        // Step 3: Cleanup & Final Stats
+        // Cleanup & Final Stats
         endGame();
     }
 

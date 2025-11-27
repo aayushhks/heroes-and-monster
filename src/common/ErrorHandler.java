@@ -16,9 +16,6 @@ public class ErrorHandler {
         System.err.println("The application encountered an unexpected error and must close.");
         System.err.println("Error Details: " + e.getMessage());
 
-        // In production, you would log the stack trace to a file here.
-        // e.printStackTrace(); // Uncomment for debugging
-
         System.exit(1);
     }
 }

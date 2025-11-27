@@ -45,8 +45,7 @@ public class Party {
         return heroes.size();
     }
 
-    // --- Location Management ---
-
+    // Location Management
     public void setLocation(int row, int col) {
         this.row = row;
         this.col = col;

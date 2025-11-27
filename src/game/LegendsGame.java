@@ -55,6 +55,12 @@ public class LegendsGame extends Game {
         this.marketController = new MarketController();
         this.battleController = new BattleController(allMonsters);
 
+        setupNewSession(scanner);
+    }
+
+    private void setupNewSession(Scanner scanner) {
+        quitGame = false; // Reset quit flag for new session
+
         System.out.println("\n" + ANSI_YELLOW + "--- World Generation ---" + ANSI_RESET);
         int boardSize = InputValidator.getValidInt(scanner, "Enter board size (4-20): ", 4, 20);
         this.board = new LegendsBoard(boardSize);
@@ -159,6 +165,9 @@ public class LegendsGame extends Game {
         System.out.println(ANSI_CYAN + "+----------------------+-------+--------+--------+-----------+" + ANSI_RESET);
 
         for (Hero h : party.getHeroes()) {
+            String hp = String.format("%.0f", h.getHp());
+            String mp = String.format("%.0f", h.getMana());
+
             System.out.printf(ANSI_CYAN + "|" + ANSI_RESET + " %-20s " + ANSI_CYAN + "|" + ANSI_RESET + " %-5d " + ANSI_CYAN + "|" + ANSI_RESET + " %-6.0f " + ANSI_CYAN + "|" + ANSI_RESET + " %-6.0f " + ANSI_CYAN + "|" + ANSI_RESET + " %-9.0f " + ANSI_CYAN + "|\n" + ANSI_RESET,
                     h.getName(), h.getLevel(), h.getHp(), h.getMana(), h.getMoney());
         }
@@ -166,7 +175,7 @@ public class LegendsGame extends Game {
     }
 
     private void printControls() {
-        System.out.println("CONTROLS: [" + ANSI_YELLOW + "W" + ANSI_RESET + "]Up [" + ANSI_YELLOW + "A" + ANSI_RESET + "]Left [" + ANSI_YELLOW + "S" + ANSI_RESET + "]Down [" + ANSI_YELLOW + "D" + ANSI_RESET + "]Right  [" + ANSI_YELLOW + "M" + ANSI_RESET + "]Market [" + ANSI_YELLOW + "I" + ANSI_RESET + "]Info [" + ANSI_YELLOW + "Q" + ANSI_RESET + "]Quit");
+        System.out.println(" CONTROLS: [" + ANSI_YELLOW + "W" + ANSI_RESET + "]Up [" + ANSI_YELLOW + "A" + ANSI_RESET + "]Left [" + ANSI_YELLOW + "S" + ANSI_RESET + "]Down [" + ANSI_YELLOW + "D" + ANSI_RESET + "]Right  [" + ANSI_YELLOW + "M" + ANSI_RESET + "]Market [" + ANSI_YELLOW + "I" + ANSI_RESET + "]Info [" + ANSI_YELLOW + "Q" + ANSI_RESET + "]Quit");
         System.out.println("--------------------------------------------------------------");
     }
 
@@ -208,26 +217,16 @@ public class LegendsGame extends Game {
         marketController.enterMarket(scanner, party);
     }
 
-    // --- UPDATED PRETTY INFO TABLE (Fixed Alignment) ---
     private void showDetailedInfo() {
         System.out.println(ANSI_WHITE_BOLD + "\n=== DETAILED HERO INFORMATION ===" + ANSI_RESET);
 
         for (Hero h : party.getHeroes()) {
             System.out.println("\n" + ANSI_PURPLE + "+ " + String.format("[%s] %s (Lvl %d)", h.getType(), h.getName(), h.getLevel()) + ANSI_RESET);
 
-            // Fixed widths: HP(8) | MP(8) | STR(8) | DEX(8) | AGI(8) | GOLD(10) | XP(8)
-            // Total inner width = 8 + 8 + 8 + 8 + 8 + 10 + 8 + 6 (separators) = 64 chars + padding
-            // Let's use a rigid width that accommodates 4-5 digit stats comfortably.
-
             System.out.println(ANSI_CYAN + "+----------+----------+----------+----------+----------+------------+------------+" + ANSI_RESET);
-            // Header
             System.out.printf(ANSI_CYAN + "|" + ANSI_RESET + " HP: " + ANSI_GREEN + "%-5.0f" + ANSI_RESET + ANSI_CYAN + "|" + ANSI_RESET + " MP: " + ANSI_BLUE + "%-5.0f" + ANSI_RESET + ANSI_CYAN + "|" + ANSI_RESET + " STR: %-4.0f" + ANSI_CYAN + "|" + ANSI_RESET + " DEX: %-4.0f" + ANSI_CYAN + "|" + ANSI_RESET + " AGI: %-4.0f" + ANSI_CYAN + "|" + ANSI_RESET + " GOLD: " + ANSI_YELLOW + "%-5.0f" + ANSI_RESET + ANSI_CYAN + "|" + ANSI_RESET + " XP: %-5d " + ANSI_CYAN + "|\n" + ANSI_RESET,
                     h.getHp(), h.getMana(), h.getStrength(), h.getDexterity(), h.getAgility(), h.getMoney(), h.getExperience());
             System.out.println(ANSI_CYAN + "+----------+----------+----------+----------+----------+------------+------------+" + ANSI_RESET);
-
-            // Inventory Header matches width
-            // 10+10+10+10+10+12+9 = 71 chars roughly?
-            // Let's just use a fixed width separator for inventory that looks good.
 
             System.out.println(ANSI_CYAN + "|" + ANSI_RESET + " " + ANSI_WHITE_BOLD + "INVENTORY" + ANSI_RESET + "                                                                    " + ANSI_CYAN + "|" + ANSI_RESET);
             System.out.println(ANSI_CYAN + "+----------------------+--------+----------+--------------------------------------+" + ANSI_RESET);
@@ -238,7 +237,7 @@ public class LegendsGame extends Game {
             } else {
                 for (Item item : items) {
                     String stats = extractItemStats(item);
-                    if (stats.length() > 36) stats = stats.substring(0, 33) + "...";
+                    if (stats.length() > 40) stats = stats.substring(0, 37) + "...";
 
                     System.out.printf(ANSI_CYAN + "|" + ANSI_RESET + " %-20s " + ANSI_CYAN + "|" + ANSI_RESET + " Lv%-4d " + ANSI_CYAN + "|" + ANSI_RESET + " " + ANSI_YELLOW + "%-8.0f" + ANSI_RESET + " " + ANSI_CYAN + "|" + ANSI_RESET + " %-36s " + ANSI_CYAN + "|\n" + ANSI_RESET,
                             item.getName(), item.getMinLevel(), item.getPrice(), stats);
@@ -246,8 +245,7 @@ public class LegendsGame extends Game {
             }
             System.out.println(ANSI_CYAN + "+----------------------+--------+----------+--------------------------------------+" + ANSI_RESET);
         }
-        System.out.println("CONTROLS: [" + ANSI_YELLOW + "W" + ANSI_RESET + "]Up [" + ANSI_YELLOW + "A" + ANSI_RESET + "]Left [" + ANSI_YELLOW + "S" + ANSI_RESET + "]Down [" + ANSI_YELLOW + "D" + ANSI_RESET + "]Right  [" + ANSI_YELLOW + "M" + ANSI_RESET + "]Market [" + ANSI_YELLOW + "I" + ANSI_RESET + "]Info [" + ANSI_YELLOW + "Q" + ANSI_RESET + "]Quit");
-        System.out.println("--------------------------------------------------------------");
+        System.out.println("Press Enter to continue...");
     }
 
     private String extractItemStats(Item item) {
@@ -279,6 +277,25 @@ public class LegendsGame extends Game {
         if (party != null) {
             System.out.println(ANSI_WHITE_BOLD + "Final Status:" + ANSI_RESET);
             printDashboard();
+        }
+
+        // --- NEW: Restart Logic ---
+        Scanner scanner = new Scanner(System.in); // Use a fresh scanner or pass it down if possible
+        // Note: System.in should not be closed if we want to read again, but here we are at end of app lifecycle usually.
+
+        String input = InputValidator.getValidOption(scanner, "\n" + ANSI_YELLOW + "Do you want to play again? (y/n): " + ANSI_RESET, "y", "n");
+
+        if (input.equals("y")) {
+            // Restart the game
+            System.out.println(ANSI_GREEN + "Starting a new game..." + ANSI_RESET);
+
+            quitGame = false;
+            skipNextRender = false;
+
+            play(scanner);
+        } else {
+            System.out.println(ANSI_CYAN + "Goodbye!" + ANSI_RESET);
+            System.exit(0);
         }
     }
 }

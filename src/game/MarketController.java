@@ -95,10 +95,7 @@ public class MarketController {
         return inventory;
     }
 
-    // ==========================================
-    //               BUYING LOGIC
-    // ==========================================
-
+    // BUYING LOGIC
     private void buyLoop(Scanner scanner, Party party, List<Item> marketInventory) {
         Hero shopper = selectHero(scanner, party, "Who is buying?");
         if (shopper == null) return;
@@ -135,10 +132,7 @@ public class MarketController {
         System.out.println(ANSI_GREEN + "Purchase successful! " + item.getName() + " added to inventory." + ANSI_RESET);
     }
 
-    // ==========================================
-    //               SELLING LOGIC
-    // ==========================================
-
+    // SELLING LOGIC
     private void sellLoop(Scanner scanner, Party party) {
         Hero seller = selectHero(scanner, party, "Who is selling?");
         if (seller == null) return;
@@ -172,10 +166,7 @@ public class MarketController {
         System.out.println(ANSI_GREEN + "Sold " + item.getName() + " for " + resaleValue + " gold." + ANSI_RESET);
     }
 
-    // ==========================================
-    //                HELPERS
-    // ==========================================
-
+    // HELPERS
     private Hero selectHero(Scanner scanner, Party party, String prompt) {
         System.out.println(ANSI_CYAN + prompt + ANSI_RESET);
         for (int i = 0; i < party.getSize(); i++) {
@@ -189,8 +180,7 @@ public class MarketController {
         return party.getHero(choice - 1);
     }
 
-    // --- PRETTY TABLE PRINTING ---
-
+    // PRETTY TABLE PRINTING
     private void printItemTable(List<Item> items) {
         System.out.println(ANSI_CYAN + "+----+----------------------+-----+----------+--------------------------------+" + ANSI_RESET);
         System.out.printf(ANSI_CYAN + "|" + ANSI_RESET + " %-2s " + ANSI_CYAN + "|" + ANSI_RESET + " %-20s " + ANSI_CYAN + "|" + ANSI_RESET + " %-3s " + ANSI_CYAN + "|" + ANSI_RESET + " %-8s " + ANSI_CYAN + "|" + ANSI_RESET + " %-30s " + ANSI_CYAN + "|\n" + ANSI_RESET, "ID", "NAME", "LVL", "COST", "TYPE / STATS");

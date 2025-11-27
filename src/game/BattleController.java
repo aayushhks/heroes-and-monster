@@ -24,11 +24,10 @@ public class BattleController {
 
     // ANSI Colors
     private static final String ANSI_RESET = "\u001B[0m";
-    private static final String ANSI_CYAN = "\u001B[36m";
-    private static final String ANSI_YELLOW = "\u001B[33m";
-    private static final String ANSI_GREEN = "\u001B[32m";
     private static final String ANSI_RED = "\u001B[31m";
-    private static final String ANSI_BLUE = "\u001B[34m";
+    private static final String ANSI_GREEN = "\u001B[32m";
+    private static final String ANSI_YELLOW = "\u001B[33m";
+    private static final String ANSI_CYAN = "\u001B[36m";
     private static final String ANSI_PURPLE = "\u001B[35m";
     private static final String ANSI_WHITE_BOLD = "\033[1;37m";
 
@@ -37,9 +36,6 @@ public class BattleController {
         this.rng = RandomGenerator.getInstance();
     }
 
-    /**
-     * Initiates and manages a battle sequence.
-     */
     public void startBattle(Scanner scanner, Party party) {
         List<Monster> enemies = spawnMonsters(party);
         System.out.println(ANSI_RED + "\n*** Battle Started! Enemies approaching: ***" + ANSI_RESET);
@@ -51,7 +47,6 @@ public class BattleController {
         while (battleActive) {
             System.out.println("\n" + ANSI_YELLOW + "=== Round " + round + " ===" + ANSI_RESET);
 
-            // Returns true if battle should continue, false if player quit
             if (!processHeroesTurn(scanner, party, enemies)) {
                 battleActive = false;
                 break;
@@ -100,9 +95,6 @@ public class BattleController {
         return enemies;
     }
 
-    /**
-     * @return false if player chose to Quit, true otherwise.
-     */
     private boolean processHeroesTurn(Scanner scanner, Party party, List<Monster> enemies) {
         for (Hero hero : party.getHeroes()) {
             if (hero.isFainted()) continue;
@@ -118,7 +110,7 @@ public class BattleController {
                 System.out.println("3. Use Potion");
                 System.out.println("4. Equip Gear");
                 System.out.println("5. Info");
-                System.out.println("6. Quit Game"); // Added Quit Option
+                System.out.println("6. Quit Game");
 
                 int choice = InputValidator.getValidInt(scanner, ANSI_CYAN + "Action: " + ANSI_RESET, 1, 6);
                 switch (choice) {
@@ -129,7 +121,7 @@ public class BattleController {
                     case 5: showBattleInfo(party, enemies); break;
                     case 6:
                         System.out.println(ANSI_RED + "Quitting Game..." + ANSI_RESET);
-                        System.exit(0); // Terminate immediately
+                        System.exit(0);
                         return false;
                 }
             }
@@ -141,7 +133,10 @@ public class BattleController {
         Monster target = selectMonster(scanner, enemies);
         if (target == null) return false;
 
-        if (rng.nextDouble() < target.getDodgeChance()) {
+        // CAP MONSTER DODGE AT 30% (Making it 70% chance to hit at worst)
+        double monsterDodge = Math.min(0.30, target.getDodgeChance());
+
+        if (rng.nextDouble() < monsterDodge) {
             System.out.println(target.getName() + " dodged the attack!");
             return true;
         }
@@ -264,7 +259,11 @@ public class BattleController {
 
             Hero target = aliveHeroes.get(rng.nextInt(aliveHeroes.size()));
 
-            if (rng.nextDouble() < target.getAgility() * 0.002) {
+            // CAP HERO DODGE AT 75% (Heroes can be very dodgy, but not invincible)
+            double heroDodgeChance = target.getAgility() / (target.getAgility() + 1000.0);
+            heroDodgeChance = Math.min(0.75, heroDodgeChance);
+
+            if (rng.nextDouble() < heroDodgeChance) {
                 System.out.println(target.getName() + " dodged " + monster.getName() + "'s attack!");
                 continue;
             }

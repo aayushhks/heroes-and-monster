@@ -85,7 +85,6 @@ public class LegendsBoard extends Board {
             }
             System.out.println(); // New line after row
 
-            // Row Divider
             printHorizontalBorder();
         }
     }

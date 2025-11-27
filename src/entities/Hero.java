@@ -48,13 +48,13 @@ public class Hero extends RPGCharacter {
 
         this.inventory = new Inventory();
 
-        // Spec Rule: HP of heroes = level * 100
+        // HP of heroes = level * 100
         this.hp = this.level * 100;
     }
 
     public void gainExperience(int amount) {
         this.experience += amount;
-        // Spec Rule: Experience points to level up = hero_current_level * 10
+        // Experience points to level up = hero_current_level * 10
         if (this.experience >= this.level * 10) {
             levelUp();
         }
@@ -97,11 +97,7 @@ public class Hero extends RPGCharacter {
 
     public void revive() {
         this.hp = (this.level * 100) / 2.0; // Revive with half HP
-        this.mana = 0; // Rules don't specify MP revive, but usually 0 or half. Assume 0 or retain.
-        // Actually spec says: "A fainted hero is revived with half of their HP and mana"
-        // Let's fix that:
-        // We need 'max mana' logic to do this correctly, but currently we only track 'current mana'.
-        // We will just assume current state was max for this simple implementation, or just give 0.
+        this.mana = 0;
     }
 
     public void equipWeapon(Weapon weapon) {
